@@ -111,22 +111,34 @@ void P_ExplodeMissile (mobj_t* mo)
 #define STOPSPEED		0x1000
 #define FRICTION		0xe800
 
+//
+// Esta función se encarga de realizar el movimiento en los ejes
+// X e Y del mobj_t.
+//
 void P_XYMovement (mobj_t* mo) 
 { 	
+    // Recordad que fixed_t es un entero de 32 bits
+    // donde los 16 primeros bits son la parte entera
+    // y los siguientes 16 bits son la parte decimal.
     fixed_t 	ptryx;
     fixed_t	ptryy;
     player_t*	player;
     fixed_t	xmove;
     fixed_t	ymove;
 			
+    // Si la velocidad del mobj_t es 0...
     if (!mo->momx && !mo->momy)
     {
+	// ...y el mobj_t tiene el comportamiento de una calavera voladora...
 	if (mo->flags & MF_SKULLFLY)
 	{
-	    // the skull slammed into something
+	    // la calavera chocó contra algo y por lo tanto
+            // se debe resetear el mobj_t.
 	    mo->flags &= ~MF_SKULLFLY;
+	    // reseteamos el movimiento en todas las direcciones colocándolas
+	    // en 0,0,0.
 	    mo->momx = mo->momy = mo->momz = 0;
-
+            // Pone el mobj_t en el estado ¿spawnstate?
 	    P_SetMobjState (mo, mo->info->spawnstate);
 	}
 	return;
@@ -134,6 +146,13 @@ void P_XYMovement (mobj_t* mo)
 	
     player = mo->player;
 		
+    // Esto se podría reescribir de una forma un poco más elegante
+    // así:
+    // mo->momx = clamp(mo->momx, -MAXMOVE, MAXMOVE);
+    // mo->momy = clamp(mo->momy, -MAXMOVE, MAXMOVE);
+    // O utilizando punteros:
+    // clampp(&mo->momx, -MAXMOVE, MAXMOVE);
+    // clampp(&mo->momy, -MAXMOVE, MAXMOVE);
     if (mo->momx > MAXMOVE)
 	mo->momx = MAXMOVE;
     else if (mo->momx < -MAXMOVE)
@@ -143,36 +162,47 @@ void P_XYMovement (mobj_t* mo)
 	mo->momy = MAXMOVE;
     else if (mo->momy < -MAXMOVE)
 	mo->momy = -MAXMOVE;
-		
+
+    // Almacenamos el momentum (mom) del mobj_t
     xmove = mo->momx;
     ymove = mo->momy;
 	
     do
     {
+	// si el momentum es mayor que la mitad del MAXMOVE
+	// (NOTA: Se podría crear un HALF_MAXMOVE o MAXMOVE_HALF
+	// que almacene el valor de MAXMOVE)
 	if (xmove > MAXMOVE/2 || ymove > MAXMOVE/2)
 	{
+	    // almacenamos las nuevas coordenadas: posición actual + velocidad actual / 2
 	    ptryx = mo->x + xmove/2;
 	    ptryy = mo->y + ymove/2;
+	    // xmove e ymove son divididos por la mitad.
 	    xmove >>= 1;
 	    ymove >>= 1;
 	}
 	else
 	{
+	    // posición actual + velocidad actual
 	    ptryx = mo->x + xmove;
 	    ptryy = mo->y + ymove;
+	    // reseteamos xmove e ymove
 	    xmove = ymove = 0;
 	}
-		
+
+	// Si intentamos mover el mobj_t a las nuevas coordenadas
+	// y falla...
 	if (!P_TryMove (mo, ptryx, ptryy))
 	{
 	    // blocked move
+	    // ...si es jugador...
 	    if (mo->player)
-	    {	// try to slide along it
+	    {	// ...intenta deslizarte por la pared...
 		P_SlideMove (mo);
 	    }
-	    else if (mo->flags & MF_MISSILE)
+	    else if (mo->flags & MF_MISSILE) // si es un misil
 	    {
-		// explode a missile
+		// explota un missile
 		if (ceilingline &&
 		    ceilingline->backsector &&
 		    ceilingline->backsector->ceilingpic == skyflatnum)
