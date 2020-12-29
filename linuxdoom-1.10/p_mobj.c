@@ -221,28 +221,36 @@ void P_XYMovement (mobj_t* mo)
     } while (xmove || ymove);
     
     // slow down
+    // Si es el jugador y tiene los cheats activados
+    // y no tiene momentum.
     if (player && player->cheats & CF_NOMOMENTUM)
     {
 	// debug option for no sliding at all
 	mo->momx = mo->momy = 0;
 	return;
     }
-
+    
+    // Si es un misil o una calavera...
     if (mo->flags & (MF_MISSILE | MF_SKULLFLY) )
 	return; 	// no friction for missiles ever
-		
+
+    // Si la z es mayor que la del suelo...
+    // ¿Y qué ocurre cuando mo-> < mo->ceilz?
     if (mo->z > mo->floorz)
 	return;		// no friction when airborne
 
+    // Si es un cadaver...
     if (mo->flags & MF_CORPSE)
     {
 	// do not stop sliding
-	//  if halfway off a step with some momentum
+	// if halfway off a step with some momentum
 	if (mo->momx > FRACUNIT/4
 	    || mo->momx < -FRACUNIT/4
 	    || mo->momy > FRACUNIT/4
 	    || mo->momy < -FRACUNIT/4)
 	{
+	    // Si la altura del suelo es diferente a la del sector
+	    // del subsector en el que se encuentra el cadaver retornamos...
 	    if (mo->floorz != mo->subsector->sector->floorheight)
 		return;
 	}
@@ -265,6 +273,8 @@ void P_XYMovement (mobj_t* mo)
     }
     else
     {
+	// Aplica fricción al momentum del mobj_t utilizando
+	// FixedMul (fixed point precission).
 	mo->momx = FixedMul (mo->momx, FRICTION);
 	mo->momy = FixedMul (mo->momy, FRICTION);
     }
@@ -272,6 +282,7 @@ void P_XYMovement (mobj_t* mo)
 
 //
 // P_ZMovement
+// Mueve los objetos mobj_t en el eje z.
 //
 void P_ZMovement (mobj_t* mo)
 {
@@ -382,6 +393,8 @@ void P_ZMovement (mobj_t* mo)
 
 //
 // P_NightmareRespawn
+// Esto solo ocurre en el modo pesadilla y consiste en revivir a todos
+// los enemigos muertos cada cierto tiempo.
 //
 void
 P_NightmareRespawn (mobj_t* mobj)
@@ -413,6 +426,7 @@ P_NightmareRespawn (mobj_t* mobj)
 
     mo = P_SpawnMobj (x, y, ss->sector->floorheight , MT_TFOG); 
 
+    // ¿Otra vez?
     S_StartSound (mo, sfx_telept);
 
     // spawn the new monster
@@ -567,7 +581,9 @@ P_SpawnMobj
 //
 // P_RemoveMobj
 //
+// Cola de respawn?
 mapthing_t	itemrespawnque[ITEMQUESIZE];
+// Array con los tiempos de respawn de cada item.
 int		itemrespawntime[ITEMQUESIZE];
 int		iquehead;
 int		iquetail;
